@@ -1,0 +1,8 @@
+{
+  "name": "playwrightInstances",
+  "packageManager": "yarn@3.6.4",
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "playwright": "^1.54.1"
+  }
+}
