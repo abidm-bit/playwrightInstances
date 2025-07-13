@@ -3,12 +3,14 @@ import { chromium } from 'playwright';
 // Import the exceljs library for writing XLSX files using ES module syntax
 import ExcelJS from 'exceljs';
 import path from 'path'; // Node.js built-in module for path manipulation
+import fs from 'fs/promises'; // Node.js built-in module for file system operations (promises-based)
 
 /**
  * Runs a Playwright script to scrape port/TCP information from a paginated website.
- * It navigates to the initial URL, scrapes tcp ports, and then clicks the "next" button 
+ * It navigates to the initial URL, scrapes tcp ports, and then clicks the "next" button
  * to navigate through pages, collecting data until no more pages are available.
- * Finally, it prints the collected data to the terminal and saves it to an XLSX file.
+ * Finally, it prints the collected data to the terminal, saves it to an XLSX file,
+ * and then saves it to a CSV file.
  */
 async function runPlaywrightScript() {
   let browser; // Declare browser variable outside try-catch for finally block access
@@ -49,16 +51,17 @@ async function runPlaywrightScript() {
         break; // Exit if no data elements are found on a page
       }
 
-      // Extract text content from each element and add to our collection
+    // Extract text content from each element and add to our collection
       for (const element of portElements) {
         const text = await element.textContent();
-        allScrapedData.push(text.trim()); // Trim whitespace
-        console.log(`Scraped: ${text.trim()}`);
+        // Trim whitespace and then remove "Port: " prefix
+        allScrapedData.push(text.replace('Port: ', '').trim());
+        console.log(`Scraped: ${text.replace('Port: ', '').trim()}`);
       }
 
       // 6. Check for the "next" button ('>')
       // We use page.locator and check its visibility
-      const nextButton = page.locator('a:text-is(">")').nth(1);
+      const nextButton = page.locator('a:text-is(">")').nth(1); // .nth(1) selects the second element (0-indexed)
       const isNextButtonVisible = await nextButton.isVisible();
 
       if (isNextButtonVisible) {
@@ -92,16 +95,28 @@ async function runPlaywrightScript() {
       worksheet.addRow([data]);
     });
 
-    const fileName = 'scraped_ports.xlsx';
-    const filePath = path.join(process.cwd(), fileName); // Saves in the current working directory
+    const xlsxFileName = 'scraped_ports.xlsx';
+    const xlsxFilePath = path.join(process.cwd(), xlsxFileName); // Saves in the current working directory
 
-    await workbook.xlsx.writeFile(filePath);
-    console.log(`Data successfully saved to ${filePath}`);
+    await workbook.xlsx.writeFile(xlsxFilePath);
+    console.log(`Data successfully saved to ${xlsxFilePath}`);
+
+    // 8. Save the scraped data to a CSV file
+    console.log('\n--- Saving data to CSV ---');
+    const csvFileName = 'scraped_ports.csv';
+    const csvFilePath = path.join(process.cwd(), csvFileName);
+
+    // Prepare CSV content: header + each data item on a new line
+    const csvContent = 'Port/TCP Information\n' + allScrapedData.map(item => `"${item.replace(/"/g, '""')}"`).join('\n');
+    // Using fs.promises.writeFile for asynchronous file writing
+    await fs.writeFile(csvFilePath, csvContent, 'utf8');
+    console.log(`Data successfully saved to ${csvFilePath}`);
+
 
   } catch (error) {
     console.error('An error occurred during scraping or saving:', error);
   } finally {
-    // 8. Close the browser instance
+    // 9. Close the browser instance
     if (browser) {
       await browser.close();
       console.log('Browser closed.');
