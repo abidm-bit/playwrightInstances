@@ -51,12 +51,11 @@ async function runPlaywrightScript() {
         break; // Exit if no data elements are found on a page
       }
 
-    // Extract text content from each element and add to our collection
+      // Extract text content from each element and add to our collection
       for (const element of portElements) {
         const text = await element.textContent();
-        // Trim whitespace and then remove "Port: " prefix
-        allScrapedData.push(text.replace('Port: ', '').trim());
-        console.log(`Scraped: ${text.replace('Port: ', '').trim()}`);
+        allScrapedData.push(text.trim()); // Trim whitespace
+        console.log(`Scraped: ${text.trim()}`);
       }
 
       // 6. Check for the "next" button ('>')
